@@ -1,8 +1,9 @@
 const express = require('express');
 const req = require('express/lib/request');
 const res = require('express/lib/response');
+const { func } = require('joi');
 const app = express();
-const Joi = require('Joi');
+const Joi = require('joi');
 
 app.use(express.json());
 
@@ -2227,7 +2228,7 @@ app.get('/',(req,res) => {
 });
 
 app.get('/api/findUs/',(req,res) => {
-    res.send('Ngapain cari ini bray? Steam ya jelas gaada di sini lah.');
+    res.send('This page is empty. Perhaps you could add into this');
 });
 
 app.get('/api/listChoices', (req, res) => {
@@ -2236,38 +2237,56 @@ app.get('/api/listChoices', (req, res) => {
 
 app.put('/api/listChoices/:id',(req,res) => {
   const Choice = listChoices.find(c => c.id === parseInt(req.params.id));
-    if (!Choice) res.status(404).send('Sorry No ID Registered');
-});
+    if (!Choice) res.status(404).send('Sorry resource not registered');
+
+    const {error} = validateChoice(req.body);
+    if(error) {
+      res.status(400).send(result.error.details[0].message);
+      return;
+    }
+
+
+    Choice.jenisLokasi = req.body.jenisLokasi;
+    res.send(Choice);
+  });
 
 app.delete('/api/listChoices/:id',(req,res) => {
-  
+  const Choice = listChoices.find(c => c.id === parseInt(req.params.id));
+  if (!Choice) res.status(400).send('Given ID is not exist');
+
+  const index = listChoices.indexOf(Choice);
+  listChoices.splice(index, 1);
+
+  res.send(Choice);
 });
 
 app.post('/api/listChoices', (req,res) => {
-  const schema = {
-    name: Joi.string().min(3).required()
-  };
-
-  const result = Joi.validate(req.body, schema);
-  console.log(result);
-
-  if(!req.body.actType || req.body.actType.length < 2) {
-    res.status(400).send('Mohon Berikan Jenis Kegiatan yang benar');
-    return;
-  }
+  const {error} = validateChoice(req.body);
+    if(error) {
+      res.status(400).send(result.error.details[0].message);
+      return;
+    }
 
   const Choice = {
         id: listChoices.length + 1,
-        actType: req.body.actType
+        jenisKegiatan: req.body.jenisKegiatan
     };
     listChoices.push(Choice);
     res.send(Choice);
 });
 
-app.get('/api/listChoices/:id', (req, res) => {
+app.get(`/api/listChoices/:id`, (req, res) => {
     const Choice = listChoices.find(c => c.id === parseInt(req.params.id));
     if (!Choice) res.status(404).send('Sorry No ID Registered');
     res.send(Choice)//Error 404
 });
 
 app.listen(port, () => console.log(`listening on port ${port}`));
+
+function validateChoice(Choice){
+  const schema = {
+    jenisLokasi: Joi.string().min(6).required()
+  };
+
+  return Joi.validate(Choice, schema);
+}
